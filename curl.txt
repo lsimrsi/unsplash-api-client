@@ -1,0 +1,2 @@
+// get search/photos
+curl http://localhost:5000/search/photos
