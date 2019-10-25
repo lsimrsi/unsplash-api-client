@@ -14,21 +14,22 @@ fn search_photos(
     let builder = unsplash.search_photos("fish");
     actix_web::web::block(move || builder.send())
         .from_err()
-        .and_then(|mut res| match res.status() {
-            reqwest::StatusCode::OK => match res.text() {
-                Ok(body) => HttpResponse::Ok()
-                    .content_type("application/json")
-                    .body(body),
+        .and_then(|mut res| {
+            let body = match res.text() {
+                Ok(body) => body,
                 Err(error) => {
                     println!("get text error: {}", error);
-                    HttpResponse::InternalServerError()
-                        .content_type("application/json")
-                        .body(format!("{{\"error\": \"Error getting response text.\"}}"))
+                    "{{\"error\": \"Error getting response text.\"}}".to_string()
                 }
-            },
-            _ => HttpResponse::InternalServerError()
-                .content_type("application/json")
-                .body(format!("{{\"error\": \"Unsplash did not return 200.\"}}")),
+            };
+            match res.status() {
+                reqwest::StatusCode::OK => HttpResponse::Ok()
+                    .content_type("application/json")
+                    .body(body),
+                _ => HttpResponse::InternalServerError()
+                    .content_type("application/json")
+                    .body(body),
+            }
         })
 }
 

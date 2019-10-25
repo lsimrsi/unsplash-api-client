@@ -6,49 +6,52 @@ pub mod routes {
     pub static SEARCH_PHOTOS: &str = "search/photos";
 }
 
-pub struct Unsplash<'a> {
-    creds: Creds<'a>
+pub struct Unsplash {
+    creds: Creds
 }
 
-#[derive(Copy, Clone)]
-struct Creds<'a> {
-    access_key: &'a str,
-    secret_key: &'a str,
+#[derive(Clone, Debug)]
+struct Creds {
+    access_key: String,
+    secret_key: String,
 }
 
-impl<'a> Creds<'a> {
+impl Creds {
     fn get_access_key_param(&self) -> String {
-        format!("access_key={}", self.access_key)
+        format!("client_id={}", self.access_key)
     }
 }
 
-impl<'a> Unsplash<'a> {
-    pub fn new(access_key: &'a str, secret_key: &'a str) -> Unsplash<'a> {
+impl Unsplash {
+    pub fn new(access_key: &str, secret_key: &str) -> Unsplash {
         Unsplash {
             creds: Creds {
-                access_key,
-                secret_key,
+                access_key: access_key.to_owned(),
+                secret_key: secret_key.to_owned(),
             }
         }
     }
 
-    pub fn search_photos<'b>(&self, query: &'b str) -> SearchPhotosBuilder<'b> {
-        SearchPhotosBuilder::new(query)
+    pub fn search_photos(&self, query: &str) -> SearchPhotosBuilder {
+        SearchPhotosBuilder::new(query, self.creds.clone())
     }
 }
 
-pub struct SearchPhotosBuilder<'a> {
-    query: &'a str,
+#[derive(Debug)]
+pub struct SearchPhotosBuilder {
+    creds: Creds,
+    query: String,
     page: Option<u32>,
     per_page: Option<u32>,
     collections: Option<Vec<u32>>,
     orientation: Option<Orientation>
 }
 
-impl<'a> SearchPhotosBuilder<'a> {
-    fn new(query: &'a str) -> SearchPhotosBuilder<'a> {
+impl SearchPhotosBuilder {
+    fn new(query: &str, creds: Creds) -> SearchPhotosBuilder {
         SearchPhotosBuilder {
-            query,
+            creds,
+            query: query.to_owned(),
             page: None,
             per_page: None,
             collections: None,
@@ -57,9 +60,10 @@ impl<'a> SearchPhotosBuilder<'a> {
     }
 
     pub fn send(self) -> reqwest::Result<reqwest::Response> {
-        // let ak_param = self.creds.get_access_key_param();
-        // let url = format!("{}{}?query={}&{}", routes::BASE_URL, routes::SEARCH_PHOTOS, self.query, ak_param);
-        reqwest::get("https://www.rust-lang.org")
+        let ak_param = self.creds.get_access_key_param();
+        let url = format!("{}{}?query={}&{}", routes::BASE_URL, routes::SEARCH_PHOTOS, self.query, ak_param);
+        println!("req: {}", url);
+        reqwest::get(&url)
     }
 
     pub fn page(&mut self, page: u32) -> &mut Self {
@@ -68,6 +72,7 @@ impl<'a> SearchPhotosBuilder<'a> {
     }
 }
 
+#[derive(Debug)]
 enum Orientation {
     Landscape,
     Portrait,
