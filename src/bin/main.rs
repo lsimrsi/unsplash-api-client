@@ -1,17 +1,23 @@
 use actix_files as fs;
-use actix_web::{http, middleware, web, guard, App, Error, HttpResponse, HttpServer};
+use actix_web::{http, middleware, web, guard, App, Error, HttpRequest, HttpResponse, HttpServer};
 use futures::Future;
 use reqwest::{self};
 use std::env;
 use unsplash_api::{self, Unsplash, routes};
+use qstring::QString;
 
 #[macro_use]
 extern crate lazy_static;
 
 fn search_photos(
+    req: HttpRequest,
     unsplash: web::Data<Unsplash>,
 ) -> impl Future<Item = HttpResponse, Error = actix_web::Error> {
-    let builder = unsplash.search_photos("fish");
+    let qs = QString::from(req.query_string());
+    let query = qs.get("query").expect("couldn't get query");
+
+    let builder = unsplash.search_photos(query);
+
     actix_web::web::block(move || builder.send())
         .from_err()
         .and_then(|mut res| {
@@ -47,8 +53,8 @@ fn get_server_port() -> u16 {
 }
 
 lazy_static! {
-    static ref ACCESS_KEY: String = env::var("ACCESS_KEY").unwrap();
-    static ref SECRET_KEY: String = env::var("SECRET_KEY").unwrap();
+    static ref ACCESS_KEY: String = env::var("UNSPLASH_ACCESS_KEY").unwrap();
+    static ref SECRET_KEY: String = env::var("UNSPLASH_SECRET_KEY").unwrap();
 }
 
 fn main() {
