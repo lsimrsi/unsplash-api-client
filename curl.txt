@@ -8,3 +8,6 @@ curl http://localhost:5000/search/photos?query=fish
 curl "http://localhost:5000/search/photos?query=fish&collections=197,196"
 curl "http://localhost:5000/search/photos?query=fish&collections[]=197&collections[]=196"
 curl "http://localhost:5000/search/photos?query=fish&collections=197&collections=196"
+
+// with orientation
+curl "http://localhost:5000/search/photos?query=fish&orientation=landscape"

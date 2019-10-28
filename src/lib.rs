@@ -78,7 +78,7 @@ pub struct Optionals {
 }
 
 impl Optionals {
-    fn array_to_string(arr: &Vec<u32>) -> String {
+    fn _array_to_string(arr: &Vec<u32>) -> String {
         let mut query: String = arr.iter().map(|item| format!("{},", item.to_string())).collect();
         query.pop();
         query
@@ -101,6 +101,12 @@ impl Optionals {
             _ => String::from("")
         }
     }
+    fn orientation(&self) -> String {
+        match &self.orientation {
+            Some(orientation) => format!("&orientation={}", orientation),
+            _ => String::from("")
+        }
+    }
 }
 
 impl Optional for Optionals {
@@ -111,6 +117,7 @@ impl Optional for Optionals {
                 query = format!("{qu}{param}", qu = query, param = self.page());
                 query = format!("{qu}{param}", qu = query, param = self.per_page());
                 query = format!("{qu}{param}", qu = query, param = self.collections());
+                query = format!("{qu}{param}", qu = query, param = self.orientation());
                 query
             }
             _ => query
@@ -120,8 +127,11 @@ impl Optional for Optionals {
 
 #[derive(Deserialize, Debug)]
 enum Orientation {
+    #[serde(rename = "landscape")]
     Landscape,
+    #[serde(rename = "portrait")]
     Portrait,
+    #[serde(rename = "squarish")]
     Squarish,
 }
 
@@ -141,8 +151,8 @@ mod tests {
 
     #[test]
     fn array_to_string() {
-        assert_eq!(Optionals::array_to_string(&vec![196,197]),"196,197");
-        assert_eq!(Optionals::array_to_string(&vec![196]),"196");
-        assert_eq!(Optionals::array_to_string(&Vec::<u32>::new()),"");
+        assert_eq!(Optionals::_array_to_string(&vec![196,197]),"196,197");
+        assert_eq!(Optionals::_array_to_string(&vec![196]),"196");
+        assert_eq!(Optionals::_array_to_string(&Vec::<u32>::new()),"");
     }
 }
