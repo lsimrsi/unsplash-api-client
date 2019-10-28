@@ -2,14 +2,16 @@ use reqwest;
 use std::fmt;
 use serde::Deserialize;
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
+use std::sync::Arc;
 
 pub mod routes {
     pub const BASE_URL: &str = "https://api.unsplash.com/";
     pub const SEARCH_PHOTOS: &str = "search/photos";
 }
 
+#[derive(Clone)]
 pub struct Unsplash {
-    client: reqwest::Client,
+    client: Arc<reqwest::Client>,
     access_key: String,
     _secret_key: String,
 }
@@ -17,7 +19,7 @@ pub struct Unsplash {
 impl Unsplash {
     pub fn new(access_key: &str, secret_key: &str) -> Unsplash {
         Unsplash {
-            client: reqwest::Client::new(),
+            client: Arc::new(reqwest::Client::new()),
             access_key: access_key.to_owned(),
             _secret_key: secret_key.to_owned(),
         }

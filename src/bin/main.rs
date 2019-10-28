@@ -4,9 +4,6 @@ use futures::Future;
 use std::env;
 use unsplash_api::{self, routes, Unsplash};
 
-#[macro_use]
-extern crate lazy_static;
-
 fn search_photos(
     required: web::Query<unsplash_api::SearchPhotos>,
     optional: web::Query<unsplash_api::Optionals>,
@@ -50,15 +47,13 @@ fn get_server_port() -> u16 {
         .expect("PORT must be a number")
 }
 
-lazy_static! {
-    static ref ACCESS_KEY: String = env::var("UNSPLASH_ACCESS_KEY").unwrap();
-    static ref SECRET_KEY: String = env::var("UNSPLASH_SECRET_KEY").unwrap();
-}
-
 fn main() {
+    let access_key: String = env::var("UNSPLASH_ACCESS_KEY").unwrap();
+    let secret_key: String = env::var("UNSPLASH_SECRET_KEY").unwrap();
+
     HttpServer::new(move || {
         App::new()
-            .data(Unsplash::new(&ACCESS_KEY, &SECRET_KEY))
+            .data(Unsplash::new(&access_key, &secret_key))
             .wrap(middleware::Logger::default())
             .service(web::resource(routes::SEARCH_PHOTOS).route(web::get().to_async(search_photos)))
             .service(fs::Files::new("/", "static/build").index_file("index.html"))
