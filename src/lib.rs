@@ -73,13 +73,15 @@ impl Required for SearchPhotos {
 pub struct Optionals {
     page: Option<u32>,
     per_page: Option<u32>,
-    collections: Option<Vec<u32>>,
+    collections: Option<String>,
     orientation: Option<Orientation>,
 }
 
 impl Optionals {
-    fn array_to_string<T: fmt::Display>(arr: &Vec<T>) -> String {
-        arr.iter().map(|item| format!("&collections[]={}", item.to_string())).collect()
+    fn array_to_string(arr: &Vec<u32>) -> String {
+        let mut query: String = arr.iter().map(|item| format!("{},", item.to_string())).collect();
+        query.pop();
+        query
     }
     fn page(&self) -> String {
         match self.page {
@@ -95,7 +97,7 @@ impl Optionals {
     }
     fn collections(&self) -> String {
         match &self.collections {
-            Some(collections) => Optionals::array_to_string(collections),
+            Some(collections) => format!("&collections={}", collections),
             _ => String::from("")
         }
     }
@@ -139,8 +141,8 @@ mod tests {
 
     #[test]
     fn array_to_string() {
-        assert_eq!(Optionals::array_to_string(&vec![196,197]),"&collections[]=196&collections[]=197");
-        assert_eq!(Optionals::array_to_string(&vec![196]),"&collections[]=196");
+        assert_eq!(Optionals::array_to_string(&vec![196,197]),"196,197");
+        assert_eq!(Optionals::array_to_string(&vec![196]),"196");
         assert_eq!(Optionals::array_to_string(&Vec::<u32>::new()),"");
     }
 }

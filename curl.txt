@@ -5,4 +5,6 @@ curl http://localhost:5000/search/photos
 curl http://localhost:5000/search/photos?query=fish
 
 // with collections
-curl http://localhost:5000/search/photos?query=fish&collections[]=197
+curl "http://localhost:5000/search/photos?query=fish&collections=197,196"
+curl "http://localhost:5000/search/photos?query=fish&collections[]=197&collections[]=196"
+curl "http://localhost:5000/search/photos?query=fish&collections=197&collections=196"
