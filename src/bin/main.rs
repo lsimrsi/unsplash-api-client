@@ -1,41 +1,39 @@
 use actix_files as fs;
-use actix_web::{http, middleware, web, guard, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{guard, http, middleware, web, App, Error, HttpResponse, HttpServer};
 use futures::Future;
-use reqwest::{self};
 use std::env;
-use unsplash_api::{self, Unsplash, routes};
-use qstring::QString;
+use unsplash_api::{self, routes, Unsplash};
 
 #[macro_use]
 extern crate lazy_static;
 
 fn search_photos(
-    req: HttpRequest,
+    required: web::Query<unsplash_api::SearchPhotos>,
+    optional: web::Query<unsplash_api::Optionals>,
     unsplash: web::Data<Unsplash>,
 ) -> impl Future<Item = HttpResponse, Error = actix_web::Error> {
-    let qs = QString::from(req.query_string());
-    let query = qs.get("query").expect("couldn't get query");
 
-    let builder = unsplash.search_photos(query);
-
-    actix_web::web::block(move || builder.send())
+    println!("{:?}", optional);
+    actix_web::web::block(move || unsplash.get(required.into_inner(), optional.into_inner()))
         .from_err()
-        .and_then(|mut res| {
-            let body = match res.text() {
-                Ok(body) => body,
-                Err(error) => {
-                    println!("get text error: {}", error);
-                    "{{\"error\": \"Error getting response text.\"}}".to_string()
-                }
-            };
-            match res.status() {
-                reqwest::StatusCode::OK => HttpResponse::Ok()
-                    .content_type("application/json")
-                    .body(body),
-                _ => HttpResponse::InternalServerError()
-                    .content_type("application/json")
-                    .body(body),
-            }
+        .and_then(|res| {
+            HttpResponse::Ok()
+                .content_type("application/json")
+                .body(res)
+
+            // let body = match res.text() {
+            //     Ok(body) => body,
+            //     Err(error) => {
+            //         println!("get text error: {}", error);
+            //         "{{\"error\": \"Error getting response text.\"}}".to_string()
+            //     }
+            // };
+            // match res.status() {
+            //     reqwest::StatusCode::OK => 
+            //     _ => HttpResponse::InternalServerError()
+            //         .content_type("application/json")
+            //         .body(body),
+            // }
         })
 }
 
@@ -47,7 +45,7 @@ fn p404() -> Result<fs::NamedFile, Error> {
 // for example, Heroku defines its own port
 fn get_server_port() -> u16 {
     env::var("PORT")
-        .unwrap_or_else(|_| "5000".to_string())
+        .unwrap_or_else(|_| 5000.to_string())
         .parse()
         .expect("PORT must be a number")
 }
@@ -60,10 +58,7 @@ lazy_static! {
 fn main() {
     HttpServer::new(move || {
         App::new()
-            .data(Unsplash::new(
-                &ACCESS_KEY,
-                &SECRET_KEY,
-            ))
+            .data(Unsplash::new(&ACCESS_KEY, &SECRET_KEY))
             .wrap(middleware::Logger::default())
             .service(web::resource(routes::SEARCH_PHOTOS).route(web::get().to_async(search_photos)))
             .service(fs::Files::new("/", "static/build").index_file("index.html"))

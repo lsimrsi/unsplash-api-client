@@ -1,78 +1,122 @@
-use std::fmt;
 use reqwest;
+use std::fmt;
+use serde::Deserialize;
+use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 
 pub mod routes {
-    pub static BASE_URL: &str = "https://api.unsplash.com/";
-    pub static SEARCH_PHOTOS: &str = "search/photos";
+    pub const BASE_URL: &str = "https://api.unsplash.com/";
+    pub const SEARCH_PHOTOS: &str = "search/photos";
 }
 
 pub struct Unsplash {
-    creds: Creds
-}
-
-#[derive(Clone, Debug)]
-struct Creds {
+    client: reqwest::Client,
     access_key: String,
-    secret_key: String,
-}
-
-impl Creds {
-    fn get_access_key_param(&self) -> String {
-        format!("client_id={}", self.access_key)
-    }
+    _secret_key: String,
 }
 
 impl Unsplash {
     pub fn new(access_key: &str, secret_key: &str) -> Unsplash {
         Unsplash {
-            creds: Creds {
-                access_key: access_key.to_owned(),
-                secret_key: secret_key.to_owned(),
-            }
+            client: reqwest::Client::new(),
+            access_key: access_key.to_owned(),
+            _secret_key: secret_key.to_owned(),
         }
     }
 
-    pub fn search_photos(&self, query: &str) -> SearchPhotosBuilder {
-        SearchPhotosBuilder::new(query, self.creds.clone())
+    pub fn get<R, O>(&self, required: R, optional: O) -> reqwest::Result<String>
+        where
+            R: Required,
+            O: Optional
+    {
+        let url = format!("{base}{path}?{required}{optional}{key}",
+            base = routes::BASE_URL,
+            path = routes::SEARCH_PHOTOS,
+            required = required.to_query(),
+            optional = optional.to_query(required.get_route()),
+            key = self.get_access_key_param());
+
+        println!("url: {}", &url);
+        self.client.get(&url).send()?.text()
+    }
+
+    fn get_access_key_param(&self) -> String {
+        format!("&client_id={}", self.access_key)
     }
 }
 
-#[derive(Debug)]
-pub struct SearchPhotosBuilder {
-    creds: Creds,
+pub trait Required {
+    fn get_route(&self) -> &'static str;
+    fn to_query(&self) -> String;
+}
+
+pub trait Optional {
+    fn to_query(&self, path: &str) -> String;
+}
+
+#[derive(Deserialize, Debug)]
+pub struct SearchPhotos {
     query: String,
+}
+
+impl Required for SearchPhotos {
+    fn get_route(&self) -> &'static str {
+        routes::SEARCH_PHOTOS
+    }
+    fn to_query(&self) -> String {
+        const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"');
+        let query = utf8_percent_encode(&self.query, FRAGMENT).to_string();
+        format!("query={}", query)
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Optionals {
     page: Option<u32>,
     per_page: Option<u32>,
     collections: Option<Vec<u32>>,
-    orientation: Option<Orientation>
+    orientation: Option<Orientation>,
 }
 
-impl SearchPhotosBuilder {
-    fn new(query: &str, creds: Creds) -> SearchPhotosBuilder {
-        SearchPhotosBuilder {
-            creds,
-            query: query.to_owned(),
-            page: None,
-            per_page: None,
-            collections: None,
-            orientation: None,
+impl Optionals {
+    fn array_to_string<T: fmt::Display>(arr: &Vec<T>) -> String {
+        arr.iter().map(|item| format!("&collections[]={}", item.to_string())).collect()
+    }
+    fn page(&self) -> String {
+        match self.page {
+            Some(page) => format!("&page={}", page),
+            _ => String::from("")
         }
     }
-
-    pub fn send(self) -> reqwest::Result<reqwest::Response> {
-        let ak_param = self.creds.get_access_key_param();
-        let url = format!("{}{}?query={}&{}", routes::BASE_URL, routes::SEARCH_PHOTOS, self.query, ak_param);
-        println!("req: {}", url);
-        reqwest::get(&url)
+    fn per_page(&self) -> String {
+        match self.per_page {
+            Some(per_page) => format!("&per_page={}", per_page),
+            _ => String::from("")
+        }
     }
-
-    pub fn page(&mut self, page: u32) -> &mut Self {
-        self.page = Some(page);
-        self
+    fn collections(&self) -> String {
+        match &self.collections {
+            Some(collections) => Optionals::array_to_string(collections),
+            _ => String::from("")
+        }
     }
 }
 
-#[derive(Debug)]
+impl Optional for Optionals {
+    fn to_query(&self, path: &str) -> String {
+        let mut query = String::from("");
+        match path {
+            routes::SEARCH_PHOTOS => {
+                query = format!("{qu}{param}", qu = query, param = self.page());
+                query = format!("{qu}{param}", qu = query, param = self.per_page());
+                query = format!("{qu}{param}", qu = query, param = self.collections());
+                query
+            }
+            _ => query
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
 enum Orientation {
     Landscape,
     Portrait,
@@ -83,8 +127,20 @@ impl fmt::Display for Orientation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Orientation::Landscape => write!(f, "{}", "landscape"),
-            Orientation::Portrait =>  write!(f, "{}", "portrait"),
-            Orientation::Squarish =>  write!(f, "{}", "squarish"),
+            Orientation::Portrait => write!(f, "{}", "portrait"),
+            Orientation::Squarish => write!(f, "{}", "squarish"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn array_to_string() {
+        assert_eq!(Optionals::array_to_string(&vec![196,197]),"&collections[]=196&collections[]=197");
+        assert_eq!(Optionals::array_to_string(&vec![196]),"&collections[]=196");
+        assert_eq!(Optionals::array_to_string(&Vec::<u32>::new()),"");
     }
 }

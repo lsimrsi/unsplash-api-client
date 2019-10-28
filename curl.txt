@@ -1,5 +1,8 @@
-// get search/photos
+// get search/photos 
 curl http://localhost:5000/search/photos
 
-// get search/photos with query
+// with query
 curl http://localhost:5000/search/photos?query=fish
+
+// with collections
+curl http://localhost:5000/search/photos?query=fish&collections[]=197
