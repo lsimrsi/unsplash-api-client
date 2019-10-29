@@ -9,7 +9,14 @@ fn search_photos(
     optional: web::Query<unsplash_api::Optionals>,
     unsplash: web::Data<Unsplash>,
 ) -> impl Future<Item = HttpResponse, Error = actix_web::Error> {
-    println!("{:?}", optional);
+    send_request(required, optional, unsplash)
+}
+
+fn photos_random(
+    required: web::Query<unsplash_api::PhotosRandom>,
+    optional: web::Query<unsplash_api::Optionals>,
+    unsplash: web::Data<Unsplash>,
+) -> impl Future<Item = HttpResponse, Error = actix_web::Error> {
     send_request(required, optional, unsplash)
 }
 
@@ -48,8 +55,10 @@ fn main() {
         App::new()
             .data(Unsplash::new(&access_key, &secret_key))
             .wrap(middleware::Logger::default())
-            .service(
-                web::resource(routes::SEARCH_PHOTOS).route(web::get().to_async(search_photos)))
+            .service(web::scope("/unsplash")
+                .route(routes::SEARCH_PHOTOS, web::get().to_async(search_photos))
+                .route(routes::PHOTOS_RANDOM, web::get().to_async(photos_random))
+            )
             .service(fs::Files::new("/", "static/build").index_file("index.html"))
             .default_service(
                 // 404 for GET request

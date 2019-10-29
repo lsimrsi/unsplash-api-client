@@ -1,11 +1,20 @@
 // get search/photos 
-curl http://localhost:5000/search/photos
+curl "http://localhost:5000/unsplash/search/photos"
 
-// with query
-curl http://localhost:5000/search/photos?query=fish
+    // query
+    curl "http://localhost:5000/unsplash/search/photos?query=fish"
 
-// with collections
-curl "http://localhost:5000/search/photos?query=fish&collections=197,196"
+    // collections
+    curl "http://localhost:5000/unsplash/search/photos?query=fish&collections=197,196"
 
-// with orientation
-curl "http://localhost:5000/search/photos?query=fish&orientation=landscape"
+    // orientation
+    curl "http://localhost:5000/unsplash/search/photos?query=fish&orientation=landscape"
+
+// get photos/random 
+curl "http://localhost:5000/unsplash/photos/random"
+
+    // featured
+    curl "http://localhost:5000/unsplash/photos/random?featured=true"
+
+    // query and collections
+    curl "http://localhost:5000/unsplash/photos/random?query=fish&collections=197"

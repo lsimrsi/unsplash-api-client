@@ -7,6 +7,7 @@ use std::sync::Arc;
 pub mod routes {
     pub const BASE_URL: &str = "https://api.unsplash.com/";
     pub const SEARCH_PHOTOS: &str = "search/photos";
+    pub const PHOTOS_RANDOM: &str = "photos/random";
 }
 
 #[derive(Clone)]
@@ -32,7 +33,7 @@ impl Unsplash {
     {
         let url = format!("{base}{path}?{required}{optional}{key}",
             base = routes::BASE_URL,
-            path = routes::SEARCH_PHOTOS,
+            path = required.get_route(),
             required = required.to_query(),
             optional = optional.to_query(required.get_route()),
             key = self.get_access_key_param());
@@ -72,11 +73,27 @@ impl Required for SearchPhotos {
 }
 
 #[derive(Deserialize, Debug)]
+pub struct PhotosRandom {}
+
+impl Required for PhotosRandom {
+    fn get_route(&self) -> &'static str {
+        routes::PHOTOS_RANDOM
+    }
+    fn to_query(&self) -> String {
+        String::from("")
+    }
+}
+
+#[derive(Deserialize, Debug)]
 pub struct Optionals {
     page: Option<u32>,
     per_page: Option<u32>,
     collections: Option<String>,
     orientation: Option<Orientation>,
+    featured: Option<bool>,
+    username: Option<String>,
+    query: Option<String>,
+    count: Option<u8>, // Default: 1; max: 30
 }
 
 impl Optionals {
@@ -109,20 +126,60 @@ impl Optionals {
             _ => String::from("")
         }
     }
+    fn featured(&self) -> String {
+        match self.featured {
+            Some(featured) => format!("&featured={}", featured),
+            _ => String::from("")
+        }
+    }
+    fn username(&self) -> String {
+        match &self.username {
+            Some(username) => format!("&username={}", username),
+            _ => String::from("")
+        }
+    }
+    fn query(&self) -> String {
+        match &self.query {
+            Some(query) => format!("&query={}", query),
+            _ => String::from("")
+        }
+    }
+    fn count(&self) -> String {
+        match &self.count {
+            Some(count) => format!("&count={}", count),
+            _ => String::from("")
+        }
+    }
 }
 
 impl Optional for Optionals {
     fn to_query(&self, path: &str) -> String {
-        let mut query = String::from("");
+        let mut qs = String::from("");
+
         match path {
             routes::SEARCH_PHOTOS => {
-                query = format!("{qu}{param}", qu = query, param = self.page());
-                query = format!("{qu}{param}", qu = query, param = self.per_page());
-                query = format!("{qu}{param}", qu = query, param = self.collections());
-                query = format!("{qu}{param}", qu = query, param = self.orientation());
-                query
+                qs = format!("{}{}", qs, self.page());
+                qs = format!("{}{}", qs, self.per_page());
+                qs = format!("{}{}", qs, self.collections());
+                qs = format!("{}{}", qs, self.orientation());
+                qs
             }
-            _ => query
+
+            routes::PHOTOS_RANDOM => {
+                // match &self.collections {
+                //     Some(_) => qs = format!("{}{}", qs, self.collections()),
+                //     _ => qs = format!("{}{}", qs, self.query()),
+                // };
+                qs = format!("{}{}", qs, self.collections());
+                qs = format!("{}{}", qs, self.query());
+                qs = format!("{}{}", qs, self.featured());
+                qs = format!("{}{}", qs, self.username());
+                qs = format!("{}{}", qs, self.orientation());
+                qs = format!("{}{}", qs, self.count());
+                qs
+            }
+
+            _ => qs
         }
     }
 }
