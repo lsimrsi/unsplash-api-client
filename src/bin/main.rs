@@ -9,28 +9,21 @@ fn search_photos(
     optional: web::Query<unsplash_api::Optionals>,
     unsplash: web::Data<Unsplash>,
 ) -> impl Future<Item = HttpResponse, Error = actix_web::Error> {
-
     println!("{:?}", optional);
+    send_request(required, optional, unsplash)
+}
+
+fn send_request<R: unsplash_api::Required + Send + 'static>(
+    required: web::Query<R>,
+    optional: web::Query<unsplash_api::Optionals>,
+    unsplash: web::Data<Unsplash>,
+) -> impl Future<Item = HttpResponse, Error = actix_web::Error> {
     actix_web::web::block(move || unsplash.get(required.into_inner(), optional.into_inner()))
         .from_err()
         .and_then(|res| {
             HttpResponse::Ok()
                 .content_type("application/json")
                 .body(res)
-
-            // let body = match res.text() {
-            //     Ok(body) => body,
-            //     Err(error) => {
-            //         println!("get text error: {}", error);
-            //         "{{\"error\": \"Error getting response text.\"}}".to_string()
-            //     }
-            // };
-            // match res.status() {
-            //     reqwest::StatusCode::OK => 
-            //     _ => HttpResponse::InternalServerError()
-            //         .content_type("application/json")
-            //         .body(body),
-            // }
         })
 }
 
@@ -55,7 +48,8 @@ fn main() {
         App::new()
             .data(Unsplash::new(&access_key, &secret_key))
             .wrap(middleware::Logger::default())
-            .service(web::resource(routes::SEARCH_PHOTOS).route(web::get().to_async(search_photos)))
+            .service(
+                web::resource(routes::SEARCH_PHOTOS).route(web::get().to_async(search_photos)))
             .service(fs::Files::new("/", "static/build").index_file("index.html"))
             .default_service(
                 // 404 for GET request
