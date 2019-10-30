@@ -93,6 +93,17 @@ impl Unsplash {
     }
 }
 
+// trying to extract lines 72-78 into a more generic function
+fn parse_header_number(res: &reqwest::Response, header: &str) -> usize {
+    if let Some(headerVal) = res.headers().get("X-Ratelimit-Limit") {
+        if let Ok(val) = headerVal.to_str() {
+            let num = val.parse().unwrap();
+            num
+        }
+    }
+    0
+}
+
 pub trait Required {
     fn get_route(&self) -> routes::Route;
     fn to_query(&self) -> String;
