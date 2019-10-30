@@ -3,6 +3,8 @@ use reqwest;
 use serde::Deserialize;
 use std::fmt;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+// use std::ops::{Deref, DerefMut};
 
 pub mod routes {
     pub enum Method {
@@ -29,6 +31,8 @@ pub mod routes {
 #[derive(Clone)]
 pub struct Unsplash {
     client: Arc<reqwest::Client>,
+    rate_limit: Arc<AtomicUsize>,
+    rate_remaining: Arc<AtomicUsize>,
     access_key: String,
     _secret_key: String,
 }
@@ -39,6 +43,8 @@ impl Unsplash {
             client: Arc::new(reqwest::Client::new()),
             access_key: access_key.to_owned(),
             _secret_key: secret_key.to_owned(),
+            rate_limit: Arc::new(AtomicUsize::new(0)),
+            rate_remaining: Arc::new(AtomicUsize::new(50)),
         }
     }
 
@@ -57,10 +63,29 @@ impl Unsplash {
         );
 
         println!("url: {}", &url);
+        let mut res: reqwest::Response;
         match required.get_route().method {
-            routes::Method::Get => self.client.get(&url).send()?.text(),
-            routes::Method::Post => self.client.post(&url).send()?.text(),
+            routes::Method::Get => res = self.client.get(&url).send()?,
+            routes::Method::Post => res = self.client.post(&url).send()?,
         }
+
+        if let Some(limit) = res.headers().get("X-Ratelimit-Limit") {
+            if let Ok(val) = limit.to_str() {
+                let num = val.parse().expect("couldn't parse header: X-Ratelimit-Limit");
+                self.rate_limit.store(num, Ordering::Relaxed);
+                println!("X-Ratelimit-Limit: {}", num);
+            }
+        }
+
+        if let Some(remaining) = res.headers().get("X-Ratelimit-Remaining") {
+            if let Ok(val) = remaining.to_str() {
+                let num = val.parse().expect("couldn't parse header: X-Ratelimit-Remaining");
+                self.rate_limit.store(num, Ordering::Relaxed);
+                println!("X-Ratelimit-Remaining: {}", num);
+            }
+        }
+
+        res.text()
     }
 
     fn get_access_key_param(&self) -> String {

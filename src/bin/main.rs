@@ -53,10 +53,11 @@ fn get_server_port() -> u16 {
 fn main() {
     let access_key: String = env::var("UNSPLASH_ACCESS_KEY").unwrap();
     let secret_key: String = env::var("UNSPLASH_SECRET_KEY").unwrap();
+    let unsplash = Unsplash::new(&access_key, &secret_key);
 
     HttpServer::new(move || {
         App::new()
-            .data(Unsplash::new(&access_key, &secret_key))
+            .data(unsplash.clone())
             .wrap(middleware::Logger::default())
             .service(
                 web::scope("/unsplash")
