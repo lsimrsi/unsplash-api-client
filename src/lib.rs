@@ -5,9 +5,25 @@ use std::fmt;
 use std::sync::Arc;
 
 pub mod routes {
-    pub const BASE_URL: &str = "https://api.unsplash.com/";
-    pub const SEARCH_PHOTOS: &str = "search/photos";
-    pub const PHOTOS_RANDOM: &str = "photos/random";
+    pub enum Method {
+        Get,
+        Post,
+    }
+
+    pub struct Route {
+        pub method: Method,
+        pub path: &'static str,
+    }
+
+    impl Route {
+        pub fn new(method: Method, path: &'static str) -> Route {
+            Route { method, path }
+        }
+    }
+
+    pub const BASE_URL: &'static str = "https://api.unsplash.com/";
+    pub const SEARCH_PHOTOS: &'static str = "search/photos";
+    pub const PHOTOS_RANDOM: &'static str = "photos/random";
 }
 
 #[derive(Clone)]
@@ -26,7 +42,7 @@ impl Unsplash {
         }
     }
 
-    pub fn get<R, O>(&self, required: R, optional: O) -> reqwest::Result<String>
+    pub fn send<R, O>(&self, required: R, optional: O) -> reqwest::Result<String>
     where
         R: Required,
         O: Optional,
@@ -34,14 +50,17 @@ impl Unsplash {
         let url = format!(
             "{base}{path}?{required}{optional}{key}",
             base = routes::BASE_URL,
-            path = required.get_route(),
+            path = required.get_route().path,
             required = required.to_query(),
-            optional = optional.to_query(required.get_route()),
+            optional = optional.to_query(required.get_route().path),
             key = self.get_access_key_param()
         );
 
         println!("url: {}", &url);
-        self.client.get(&url).send()?.text()
+        match required.get_route().method {
+            routes::Method::Get => self.client.get(&url).send()?.text(),
+            routes::Method::Post => self.client.post(&url).send()?.text(),
+        }
     }
 
     fn get_access_key_param(&self) -> String {
@@ -50,7 +69,7 @@ impl Unsplash {
 }
 
 pub trait Required {
-    fn get_route(&self) -> &'static str;
+    fn get_route(&self) -> routes::Route;
     fn to_query(&self) -> String;
 }
 
@@ -64,9 +83,10 @@ pub struct SearchPhotos {
 }
 
 impl Required for SearchPhotos {
-    fn get_route(&self) -> &'static str {
-        routes::SEARCH_PHOTOS
+    fn get_route(&self) -> routes::Route {
+        routes::Route::new(routes::Method::Get, routes::SEARCH_PHOTOS)
     }
+
     fn to_query(&self) -> String {
         const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"');
         let query = utf8_percent_encode(&self.query, FRAGMENT).to_string();
@@ -78,8 +98,8 @@ impl Required for SearchPhotos {
 pub struct PhotosRandom {}
 
 impl Required for PhotosRandom {
-    fn get_route(&self) -> &'static str {
-        routes::PHOTOS_RANDOM
+    fn get_route(&self) -> routes::Route {
+        routes::Route::new(routes::Method::Get, routes::PHOTOS_RANDOM)
     }
     fn to_query(&self) -> String {
         String::from("")
@@ -95,7 +115,7 @@ pub struct Optionals {
     featured: Option<bool>,
     username: Option<String>,
     query: Option<String>,
-    count: Option<u8>, // Default: 1; max: 30
+    count: Option<u8>
 }
 
 impl Optionals {

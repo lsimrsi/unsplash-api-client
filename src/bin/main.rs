@@ -28,7 +28,7 @@ fn send_request<R>(
 where
     R: unsplash_api::Required + Send + 'static,
 {
-    actix_web::web::block(move || unsplash.get(required.into_inner(), optional.into_inner()))
+    actix_web::web::block(move || unsplash.send(required.into_inner(), optional.into_inner()))
         .from_err()
         .and_then(|res| {
             HttpResponse::Ok()
