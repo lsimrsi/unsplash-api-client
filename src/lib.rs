@@ -4,7 +4,6 @@ use serde::Deserialize;
 use std::fmt;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-// use std::ops::{Deref, DerefMut};
 
 pub mod routes {
     pub enum Method {
@@ -48,14 +47,34 @@ impl Unsplash {
         }
     }
 
-    pub fn passthrough(&self, path_and_query: &str, method: &str) -> reqwest::Result<String> {
-        let url = format!("{}{}", routes::BASE_URL, path_and_query);
-        let mut res: reqwest::Response;
-        match method {
-            "GET" => res = self.client.get(&url).send()?,
-            "POST" => res = self.client.post(&url).send()?,
-            _ => return Ok("unknown request method".to_string())
-        }
+    // pub fn store_limit(&self, res: &reqwest::Response, header: &'static str) -> usize {
+    //     if let Some(remaining) = res.headers().get(header) {
+    //         if let Ok(val) = remaining.to_str() {5
+    //             let num = val.parse().expect("couldn't parse header: X-Ratelimit-Remaining");
+    //             self.rate_limit.store(num, Ordering::Relaxed);
+    //             println!("X-Ratelimit-Remaining: {}", num);
+    //             num
+    //         }
+    //     }
+    //     0
+    // }
+
+    pub fn passthrough_get(&self, path_and_query: &str) -> reqwest::Result<String> {
+        let key_symbol = if path_and_query.contains("?") {
+            "&"
+        } else {
+            "?"
+        };
+
+        let url = format!(
+            "{base}{paq}{s}{key}",
+            base = routes::BASE_URL,
+            paq = path_and_query,
+            s = key_symbol,
+            key = self.get_access_key_param());
+        println!("passthrough url: {}", url);
+
+        let mut res: reqwest::Response = self.client.get(&url).send()?;
 
         if let Some(limit) = res.headers().get("X-Ratelimit-Limit") {
             if let Ok(val) = limit.to_str() {
@@ -82,7 +101,7 @@ impl Unsplash {
         O: Optional,
     {
         let url = format!(
-            "{base}{path}?{required}{optional}{key}",
+            "{base}{path}?{required}{optional}&{key}",
             base = routes::BASE_URL,
             path = required.get_route().path,
             required = required.to_query(),
@@ -117,7 +136,7 @@ impl Unsplash {
     }
 
     fn get_access_key_param(&self) -> String {
-        format!("&client_id={}", self.access_key)
+        format!("client_id={}", self.access_key)
     }
 }
 
@@ -183,49 +202,49 @@ impl Optionals {
     fn page(&self) -> String {
         match self.page {
             Some(page) => format!("&page={}", page),
-            _ => String::from(""),
+            None => String::from(""),
         }
     }
     fn per_page(&self) -> String {
         match self.per_page {
             Some(per_page) => format!("&per_page={}", per_page),
-            _ => String::from(""),
+            None => String::from(""),
         }
     }
     fn collections(&self) -> String {
         match &self.collections {
             Some(collections) => format!("&collections={}", collections),
-            _ => String::from(""),
+            None => String::from(""),
         }
     }
     fn orientation(&self) -> String {
         match &self.orientation {
             Some(orientation) => format!("&orientation={}", orientation),
-            _ => String::from(""),
+            None => String::from(""),
         }
     }
     fn featured(&self) -> String {
         match self.featured {
             Some(featured) => format!("&featured={}", featured),
-            _ => String::from(""),
+            None => String::from(""),
         }
     }
     fn username(&self) -> String {
         match &self.username {
             Some(username) => format!("&username={}", username),
-            _ => String::from(""),
+            None => String::from(""),
         }
     }
     fn query(&self) -> String {
         match &self.query {
             Some(query) => format!("&query={}", query),
-            _ => String::from(""),
+            None => String::from(""),
         }
     }
     fn count(&self) -> String {
         match &self.count {
             Some(count) => format!("&count={}", count),
-            _ => String::from(""),
+            None => String::from(""),
         }
     }
 }

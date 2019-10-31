@@ -8,15 +8,13 @@ fn unsplash_get(
     req: HttpRequest,
     unsplash: web::Data<Unsplash>,
 ) -> impl Future<Item = HttpResponse, Error = actix_web::Error> {
-    println!("unsplash get");
-    let path_and_query = match req.uri().path_and_query() {
+    let mut path_and_query = match req.uri().path_and_query() {
         Some(paq) => paq.to_string(),
         None => "".to_string(),
     };
-    let method = req.method().as_str().to_string();
-    println!("paq: {}", path_and_query);
-    println!("method: {}", method);
-    actix_web::web::block(move || unsplash.passthrough(&path_and_query, &method))
+    path_and_query.drain(0..10); // removes /unsplash/ from beginning of String
+
+    actix_web::web::block(move || unsplash.passthrough_get(&path_and_query))
         .from_err()
         .and_then(|res| {
             HttpResponse::Ok()
@@ -33,13 +31,13 @@ fn search_photos(
     send_request(required, optional, unsplash)
 }
 
-fn photos_random(
-    required: web::Query<unsplash_api::PhotosRandom>,
-    optional: web::Query<unsplash_api::Optionals>,
-    unsplash: web::Data<Unsplash>,
-) -> impl Future<Item = HttpResponse, Error = actix_web::Error> {
-    send_request(required, optional, unsplash)
-}
+// fn photos_random(
+//     required: web::Query<unsplash_api::PhotosRandom>,
+//     optional: web::Query<unsplash_api::Optionals>,
+//     unsplash: web::Data<Unsplash>,
+// ) -> impl Future<Item = HttpResponse, Error = actix_web::Error> {
+//     send_request(required, optional, unsplash)
+// }
 
 fn send_request<R>(
     required: web::Query<R>,
@@ -80,13 +78,11 @@ fn main() {
         App::new()
             .data(unsplash.clone())
             .wrap(middleware::Logger::default())
-            // .route("/unsplash", web::get().to_async(unsplash_get))
-
             .service(
                 web::scope("/unsplash")
-                    .route("/", web::get().to_async(unsplash_get))
-                    // .route(routes::SEARCH_PHOTOS, web::get().to_async(search_photos))
-                    // .route(routes::PHOTOS_RANDOM, web::get().to_async(photos_random)),
+                    .default_service(web::get().to_async(unsplash_get))
+                    .route(routes::SEARCH_PHOTOS, web::get().to_async(search_photos))
+                    // .route(routes::PHOTOS_RANDOM, web::get().to_async(photos_random))
             )
             .service(fs::Files::new("/", "static/build").index_file("index.html"))
             .default_service(
