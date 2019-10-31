@@ -1,8 +1,29 @@
 use actix_files as fs;
-use actix_web::{guard, http, middleware, web, App, Error, HttpResponse, HttpServer};
+use actix_web::{guard, http, middleware, web, App, Error, HttpResponse, HttpRequest, HttpServer};
 use futures::Future;
 use std::env;
 use unsplash_api::{self, routes, Unsplash};
+
+fn unsplash_get(
+    req: HttpRequest,
+    unsplash: web::Data<Unsplash>,
+) -> impl Future<Item = HttpResponse, Error = actix_web::Error> {
+    println!("unsplash get");
+    let path_and_query = match req.uri().path_and_query() {
+        Some(paq) => paq.to_string(),
+        None => "".to_string(),
+    };
+    let method = req.method().as_str().to_string();
+    println!("paq: {}", path_and_query);
+    println!("method: {}", method);
+    actix_web::web::block(move || unsplash.passthrough(&path_and_query, &method))
+        .from_err()
+        .and_then(|res| {
+            HttpResponse::Ok()
+                .content_type("application/json")
+                .body(res)
+        })
+}
 
 fn search_photos(
     required: web::Query<unsplash_api::SearchPhotos>,
@@ -59,10 +80,13 @@ fn main() {
         App::new()
             .data(unsplash.clone())
             .wrap(middleware::Logger::default())
+            // .route("/unsplash", web::get().to_async(unsplash_get))
+
             .service(
                 web::scope("/unsplash")
-                    .route(routes::SEARCH_PHOTOS, web::get().to_async(search_photos))
-                    .route(routes::PHOTOS_RANDOM, web::get().to_async(photos_random)),
+                    .route("/", web::get().to_async(unsplash_get))
+                    // .route(routes::SEARCH_PHOTOS, web::get().to_async(search_photos))
+                    // .route(routes::PHOTOS_RANDOM, web::get().to_async(photos_random)),
             )
             .service(fs::Files::new("/", "static/build").index_file("index.html"))
             .default_service(

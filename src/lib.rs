@@ -48,6 +48,34 @@ impl Unsplash {
         }
     }
 
+    pub fn passthrough(&self, path_and_query: &str, method: &str) -> reqwest::Result<String> {
+        let url = format!("{}{}", routes::BASE_URL, path_and_query);
+        let mut res: reqwest::Response;
+        match method {
+            "GET" => res = self.client.get(&url).send()?,
+            "POST" => res = self.client.post(&url).send()?,
+            _ => return Ok("unknown request method".to_string())
+        }
+
+        if let Some(limit) = res.headers().get("X-Ratelimit-Limit") {
+            if let Ok(val) = limit.to_str() {
+                let num = val.parse().expect("couldn't parse header: X-Ratelimit-Limit");
+                self.rate_limit.store(num, Ordering::Relaxed);
+                println!("X-Ratelimit-Limit: {}", num);
+            }
+        }
+
+        if let Some(remaining) = res.headers().get("X-Ratelimit-Remaining") {
+            if let Ok(val) = remaining.to_str() {
+                let num = val.parse().expect("couldn't parse header: X-Ratelimit-Remaining");
+                self.rate_limit.store(num, Ordering::Relaxed);
+                println!("X-Ratelimit-Remaining: {}", num);
+            }
+        }
+
+        res.text()
+    }
+
     pub fn send<R, O>(&self, required: R, optional: O) -> reqwest::Result<String>
     where
         R: Required,
