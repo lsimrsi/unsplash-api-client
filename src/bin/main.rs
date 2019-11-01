@@ -31,6 +31,18 @@ fn search_photos(
     send_request(required, optional, unsplash)
 }
 
+fn limit_info(
+    unsplash: web::Data<Unsplash>,
+) -> impl Future<Item = HttpResponse, Error = actix_web::Error> {
+    actix_web::web::block(move || unsplash.get_limit_info())
+    .from_err()
+    .and_then(|res| {
+        HttpResponse::Ok()
+            .content_type("application/json")
+            .body(res)
+    })
+}
+
 // fn photos_random(
 //     required: web::Query<unsplash_api::PhotosRandom>,
 //     optional: web::Query<unsplash_api::Optionals>,
@@ -82,6 +94,7 @@ fn main() {
                 web::scope("/unsplash")
                     .default_service(web::get().to_async(unsplash_get))
                     .route(routes::SEARCH_PHOTOS, web::get().to_async(search_photos))
+                    .route(routes::LIMIT_INFO, web::get().to_async(limit_info))
                     // .route(routes::PHOTOS_RANDOM, web::get().to_async(photos_random))
             )
             .service(fs::Files::new("/", "static/build").index_file("index.html"))

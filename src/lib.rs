@@ -25,6 +25,7 @@ pub mod routes {
     pub const BASE_URL: &'static str = "https://api.unsplash.com/";
     pub const SEARCH_PHOTOS: &'static str = "search/photos";
     pub const PHOTOS_RANDOM: &'static str = "photos/random";
+    pub const LIMIT_INFO: &'static str = "limit-info";
 }
 
 #[derive(Clone)]
@@ -87,7 +88,7 @@ impl Unsplash {
         if let Some(remaining) = res.headers().get("X-Ratelimit-Remaining") {
             if let Ok(val) = remaining.to_str() {
                 let num = val.parse().expect("couldn't parse header: X-Ratelimit-Remaining");
-                self.rate_limit.store(num, Ordering::Relaxed);
+                self.rate_remaining.store(num, Ordering::Relaxed);
                 println!("X-Ratelimit-Remaining: {}", num);
             }
         }
@@ -127,7 +128,7 @@ impl Unsplash {
         if let Some(remaining) = res.headers().get("X-Ratelimit-Remaining") {
             if let Ok(val) = remaining.to_str() {
                 let num = val.parse().expect("couldn't parse header: X-Ratelimit-Remaining");
-                self.rate_limit.store(num, Ordering::Relaxed);
+                self.rate_remaining.store(num, Ordering::Relaxed);
                 println!("X-Ratelimit-Remaining: {}", num);
             }
         }
@@ -137,6 +138,16 @@ impl Unsplash {
 
     fn get_access_key_param(&self) -> String {
         format!("client_id={}", self.access_key)
+    }
+
+    pub fn get_limit_info(&self) -> Result<String, reqwest::Error> {
+        let limit = self.rate_limit.load(Ordering::Relaxed);
+        let remaining = self.rate_remaining.load(Ordering::Relaxed);
+        Result::Ok(format!("{{\"limit\": \"{}\", \"remaining\": \"{}\"}}", limit, remaining))
+        // Builder::new()
+        //     .status(200)
+        //     .url(Url::parse("http://example.com")?)
+        //     .body(())?
     }
 }
 

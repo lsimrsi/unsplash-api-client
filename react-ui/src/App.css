@@ -1,3 +1,56 @@
+body {
+  background-color: rgb(122, 122, 122);
+  color: #ccc;
+}
+
+input {
+  box-sizing: border-box;
+  width: 400px;
+  font-size: 1.2rem;
+  padding: 10px;
+  margin-bottom: 4px;
+}
+
+#buttons {
+  margin: auto;
+  width: 400px;
+  text-align: left;
+}
+
+button {
+  padding: 10px;
+  outline: none;
+  border: none;
+  margin: 0;
+}
+
+button:focus { 
+  outline: none; 
+}
+
+button:hover {
+  background-color: #fff;
+}
+
 .app {
   text-align: center;
+}
+
+#photos {
+  text-align: center;
+}
+
+#photos img {
+  background-color: #ffffff00;
+  margin: 20px auto;
+  padding: 0px;
+  display: block;
+  box-shadow: 6px 6px 14px 0px #000000aa;
+  border: 0px solid #ffffff00;
+  transition: padding 200ms, background-color 200ms;
+}
+
+#photos img:hover {
+  background-color: white;
+  padding: 10px;
 }
