@@ -4,10 +4,7 @@ import './App.css';
 function App() {
   const [search, setSearch] = useState("");
   const [photos, setPhotos] = useState(null);
-  const [limitInfo, setLimitInfo] = useState({
-    limit: 0,
-    remaining: 0,
-  });
+  const [limitInfo, setLimitInfo] = useState(null);
 
   const onSearchChange = (e) => {
     setSearch(e.target.value);
@@ -18,53 +15,41 @@ function App() {
     fetchSearchPhotos(search);
   }
 
+  const validate_res = async (res) => {
+    if (!res) return null;
+    let json = await res.json();
+    if (!json) return null;
+    return json;
+  }
+
   useEffect(() => {
     async function fetchLimits() {
       let res = await fetch(`/unsplash/limit-info`, {
         method: 'GET',
       });
-      if (!res) return;
-  
-      let json = await res.json();
-      if (!json) return;
-  
+      let json = await validate_res(res);
       setLimitInfo(json);
     }
     fetchLimits();
   }, [photos]);
 
   const fetchSearchPhotos = async () => {
-    // setFetching(true);
-    setPhotos(null);
-
     let res = await fetch(`/unsplash/search/photos?&query=${search}`, {
       method: 'GET',
     });
-    if (!res) return;
-
-    let json = await res.json();
-    if (!json) return;
-
-    // setFetching(false);
+    let json = await validate_res(res);
     setPhotos(json);
   }
 
   const fetchPhotosRandom = async () => {
-    // setFetching(true);
-    setPhotos(null);
-
     let url = "/unsplash/photos/random?count=1";
     url = search ? url + `&query=${search}` : url;
   
     let res = await fetch(url, {
       method: 'GET',
     });
-    if (!res) return;
-
-    let json = await res.json();
-    if (!json) return;
-
-    // setFetching(false);
+  
+    let json = await validate_res(res);
     setPhotos({results: json});
   }
 
@@ -76,9 +61,9 @@ function App() {
       </form>
       <div id="buttons">
         <button onClick={fetchPhotosRandom}>Random</button>
+        {limitInfo && <span>Limit: {limitInfo.limit}</span>}
+        {limitInfo && <span>Remaining: {limitInfo.remaining}</span>}
       </div>
-      <span>Limit: {limitInfo.limit}</span>
-      <span>Remaining: {limitInfo.remaining}</span>
       <section id="photos">
         {photos && photos.results.map((photo) => {
           return <img alt="result" src={photo.urls.small} />;
