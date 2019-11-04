@@ -1,5 +1,5 @@
 use actix_files as fs;
-use actix_web::{guard, http, middleware, web, App, Error, HttpResponse, HttpRequest, HttpServer};
+use actix_web::{guard, http, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use futures::Future;
 use std::env;
 use unsplash_api::{self, routes, Unsplash};
@@ -35,12 +35,12 @@ fn limit_info(
     unsplash: web::Data<Unsplash>,
 ) -> impl Future<Item = HttpResponse, Error = actix_web::Error> {
     actix_web::web::block(move || unsplash.get_limit_info())
-    .from_err()
-    .and_then(|res| {
-        HttpResponse::Ok()
-            .content_type("application/json")
-            .body(res)
-    })
+        .from_err()
+        .and_then(|res| {
+            HttpResponse::Ok()
+                .content_type("application/json")
+                .body(res)
+        })
 }
 
 // fn photos_random(
@@ -94,8 +94,7 @@ fn main() {
                 web::scope("/unsplash")
                     .default_service(web::get().to_async(unsplash_get))
                     .route(routes::SEARCH_PHOTOS, web::get().to_async(search_photos))
-                    .route(routes::LIMIT_INFO, web::get().to_async(limit_info))
-                    // .route(routes::PHOTOS_RANDOM, web::get().to_async(photos_random))
+                    .route(routes::LIMIT_INFO, web::get().to_async(limit_info)), // .route(routes::PHOTOS_RANDOM, web::get().to_async(photos_random))
             )
             .service(fs::Files::new("/", "static/build").index_file("index.html"))
             .default_service(

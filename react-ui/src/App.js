@@ -48,7 +48,7 @@ function App() {
     let res = await fetch(url, {
       method: 'GET',
     });
-  
+
     let json = await validate_res(res);
     setPhotos({results: json});
   }

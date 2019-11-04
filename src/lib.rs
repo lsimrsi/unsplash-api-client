@@ -2,8 +2,8 @@ use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use reqwest;
 use serde::Deserialize;
 use std::fmt;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 pub mod routes {
     pub enum Method {
@@ -72,14 +72,17 @@ impl Unsplash {
             base = routes::BASE_URL,
             paq = path_and_query,
             s = key_symbol,
-            key = self.get_access_key_param());
+            key = self.get_access_key_param()
+        );
         println!("passthrough url: {}", url);
 
         let mut res: reqwest::Response = self.client.get(&url).send()?;
 
         if let Some(limit) = res.headers().get("X-Ratelimit-Limit") {
             if let Ok(val) = limit.to_str() {
-                let num = val.parse().expect("couldn't parse header: X-Ratelimit-Limit");
+                let num = val
+                    .parse()
+                    .expect("couldn't parse header: X-Ratelimit-Limit");
                 self.rate_limit.store(num, Ordering::Relaxed);
                 println!("X-Ratelimit-Limit: {}", num);
             }
@@ -87,7 +90,9 @@ impl Unsplash {
 
         if let Some(remaining) = res.headers().get("X-Ratelimit-Remaining") {
             if let Ok(val) = remaining.to_str() {
-                let num = val.parse().expect("couldn't parse header: X-Ratelimit-Remaining");
+                let num = val
+                    .parse()
+                    .expect("couldn't parse header: X-Ratelimit-Remaining");
                 self.rate_remaining.store(num, Ordering::Relaxed);
                 println!("X-Ratelimit-Remaining: {}", num);
             }
@@ -119,7 +124,9 @@ impl Unsplash {
 
         if let Some(limit) = res.headers().get("X-Ratelimit-Limit") {
             if let Ok(val) = limit.to_str() {
-                let num = val.parse().expect("couldn't parse header: X-Ratelimit-Limit");
+                let num = val
+                    .parse()
+                    .expect("couldn't parse header: X-Ratelimit-Limit");
                 self.rate_limit.store(num, Ordering::Relaxed);
                 println!("X-Ratelimit-Limit: {}", num);
             }
@@ -127,7 +134,9 @@ impl Unsplash {
 
         if let Some(remaining) = res.headers().get("X-Ratelimit-Remaining") {
             if let Ok(val) = remaining.to_str() {
-                let num = val.parse().expect("couldn't parse header: X-Ratelimit-Remaining");
+                let num = val
+                    .parse()
+                    .expect("couldn't parse header: X-Ratelimit-Remaining");
                 self.rate_remaining.store(num, Ordering::Relaxed);
                 println!("X-Ratelimit-Remaining: {}", num);
             }
@@ -143,7 +152,10 @@ impl Unsplash {
     pub fn get_limit_info(&self) -> Result<String, reqwest::Error> {
         let limit = self.rate_limit.load(Ordering::Relaxed);
         let remaining = self.rate_remaining.load(Ordering::Relaxed);
-        Result::Ok(format!("{{\"limit\": \"{}\", \"remaining\": \"{}\"}}", limit, remaining))
+        Result::Ok(format!(
+            "{{\"limit\": \"{}\", \"remaining\": \"{}\"}}",
+            limit, remaining
+        ))
         // Builder::new()
         //     .status(200)
         //     .url(Url::parse("http://example.com")?)
@@ -198,7 +210,7 @@ pub struct Optionals {
     featured: Option<bool>,
     username: Option<String>,
     query: Option<String>,
-    count: Option<u8>
+    count: Option<u8>,
 }
 
 impl Optionals {
