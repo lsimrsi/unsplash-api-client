@@ -66,7 +66,13 @@ function App() {
       </div>
       <section id="photos">
         {photos && photos.results.map((photo) => {
-          return <img alt="result" src={photo.urls.small} />;
+          return <a href={photo.urls.regular} target="_blank" rel="noopener noreferrer">
+            <div className="info">
+              <p>{photo.description}</p>
+              <p>{photo.user.name}</p>
+            </div>
+            <img alt="result" src={photo.urls.small} />
+          </a>;
         })}
       </section>
     </div>
