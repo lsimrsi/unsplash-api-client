@@ -50,7 +50,6 @@ button:hover {
   padding: 0px;
   display: block;
   box-shadow: 6px 6px 14px 0px #000000aa;
-  border: 0px solid #ffffff00;
   transition: padding 200ms, background-color 200ms;
 }
 

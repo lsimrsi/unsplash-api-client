@@ -48,17 +48,24 @@ impl Unsplash {
         }
     }
 
-    // pub fn store_limit(&self, res: &reqwest::Response, header: &'static str) -> usize {
-    //     if let Some(remaining) = res.headers().get(header) {
-    //         if let Ok(val) = remaining.to_str() {5
-    //             let num = val.parse().expect("couldn't parse header: X-Ratelimit-Remaining");
-    //             self.rate_limit.store(num, Ordering::Relaxed);
-    //             println!("X-Ratelimit-Remaining: {}", num);
-    //             num
-    //         }
-    //     }
-    //     0
-    // }
+    pub fn store_rate_limits(&self, res: &reqwest::Response, header: &str) {
+        if let Some(header_val) = res.headers().get(header) {
+            if let Ok(val_str) = header_val.to_str() {
+                if let Ok(num) = val_str.parse() {
+                    match header {
+                        "X-Ratelimit-Limit" => {
+                            self.rate_limit.store(num, Ordering::Relaxed);
+                        }
+                        "X-Ratelimit-Remaining" => {
+                            self.rate_remaining.store(num, Ordering::Relaxed);
+                        }
+                        _ => return,
+                    }
+                    println!("{}: {}", header, num);
+                }
+            }
+        }
+    }
 
     pub fn passthrough_get(&self, path_and_query: &str) -> reqwest::Result<String> {
         let key_symbol = if path_and_query.contains("?") {
@@ -74,30 +81,12 @@ impl Unsplash {
             s = key_symbol,
             key = self.get_access_key_param()
         );
-        println!("passthrough url: {}", url);
+        println!("passthrough_get url: {}", url);
 
         let mut res: reqwest::Response = self.client.get(&url).send()?;
 
-        if let Some(limit) = res.headers().get("X-Ratelimit-Limit") {
-            if let Ok(val) = limit.to_str() {
-                let num = val
-                    .parse()
-                    .expect("couldn't parse header: X-Ratelimit-Limit");
-                self.rate_limit.store(num, Ordering::Relaxed);
-                println!("X-Ratelimit-Limit: {}", num);
-            }
-        }
-
-        if let Some(remaining) = res.headers().get("X-Ratelimit-Remaining") {
-            if let Ok(val) = remaining.to_str() {
-                let num = val
-                    .parse()
-                    .expect("couldn't parse header: X-Ratelimit-Remaining");
-                self.rate_remaining.store(num, Ordering::Relaxed);
-                println!("X-Ratelimit-Remaining: {}", num);
-            }
-        }
-
+        self.store_rate_limits(&res, "X-Ratelimit-Limit");
+        self.store_rate_limits(&res, "X-Ratelimit-Remaining");
         res.text()
     }
 
@@ -114,34 +103,16 @@ impl Unsplash {
             optional = optional.to_query(required.get_route().path),
             key = self.get_access_key_param()
         );
+        println!("send url: {}", &url);
 
-        println!("url: {}", &url);
         let mut res: reqwest::Response;
         match required.get_route().method {
             routes::Method::Get => res = self.client.get(&url).send()?,
             routes::Method::Post => res = self.client.post(&url).send()?,
         }
 
-        if let Some(limit) = res.headers().get("X-Ratelimit-Limit") {
-            if let Ok(val) = limit.to_str() {
-                let num = val
-                    .parse()
-                    .expect("couldn't parse header: X-Ratelimit-Limit");
-                self.rate_limit.store(num, Ordering::Relaxed);
-                println!("X-Ratelimit-Limit: {}", num);
-            }
-        }
-
-        if let Some(remaining) = res.headers().get("X-Ratelimit-Remaining") {
-            if let Ok(val) = remaining.to_str() {
-                let num = val
-                    .parse()
-                    .expect("couldn't parse header: X-Ratelimit-Remaining");
-                self.rate_remaining.store(num, Ordering::Relaxed);
-                println!("X-Ratelimit-Remaining: {}", num);
-            }
-        }
-
+        self.store_rate_limits(&res, "X-Ratelimit-Limit");
+        self.store_rate_limits(&res, "X-Ratelimit-Remaining");
         res.text()
     }
 
@@ -156,10 +127,6 @@ impl Unsplash {
             "{{\"limit\": \"{}\", \"remaining\": \"{}\"}}",
             limit, remaining
         ))
-        // Builder::new()
-        //     .status(200)
-        //     .url(Url::parse("http://example.com")?)
-        //     .body(())?
     }
 }
 
