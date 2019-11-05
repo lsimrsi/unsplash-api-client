@@ -43,8 +43,8 @@ impl Unsplash {
             client: Arc::new(reqwest::Client::new()),
             access_key: access_key.to_owned(),
             _secret_key: secret_key.to_owned(),
-            rate_limit: Arc::new(AtomicUsize::new(0)),
-            rate_remaining: Arc::new(AtomicUsize::new(50)),
+            rate_limit: Arc::new(AtomicUsize::new(50)),
+            rate_remaining: Arc::new(AtomicUsize::new(0)),
         }
     }
 
