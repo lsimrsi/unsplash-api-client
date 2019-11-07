@@ -28,6 +28,9 @@ pub mod routes {
     pub const LIMIT_INFO: &'static str = "limit-info";
 }
 
+const LIMIT: &'static str = "X-Ratelimit-Limit";
+const REMAINING: &'static str = "X-Ratelimit-Remaining";
+
 #[derive(Clone)]
 pub struct Unsplash {
     client: Arc<reqwest::Client>,
@@ -53,10 +56,10 @@ impl Unsplash {
             if let Ok(val_str) = header_val.to_str() {
                 if let Ok(num) = val_str.parse() {
                     match header {
-                        "X-Ratelimit-Limit" => {
+                        LIMIT => {
                             self.rate_limit.store(num, Ordering::Relaxed);
                         }
-                        "X-Ratelimit-Remaining" => {
+                        REMAINING => {
                             self.rate_remaining.store(num, Ordering::Relaxed);
                         }
                         _ => return,
@@ -65,6 +68,36 @@ impl Unsplash {
                 }
             }
         }
+    }
+
+    fn make_text_response(&self, res: &mut reqwest::Response) -> reqwest::Result<String> {
+        let text = format!(
+            r#"{{
+                "body": {body},
+                "headers": {headers}
+            }}"#,
+            body = res.text()?,
+            headers = self.get_limit_info()?,
+        );
+        Ok(text)
+    }
+
+    pub fn get_limit_info(&self) -> Result<String, reqwest::Error> {
+        let limit = self.rate_limit.load(Ordering::Relaxed);
+        let remaining = self.rate_remaining.load(Ordering::Relaxed);
+
+        let json = format!(
+            r#"{{
+                "{header_limit}": {limit_value},
+                "{header_remaining}": {remaining_value}
+            }}"#,
+            header_limit = LIMIT,
+            limit_value = limit,
+            header_remaining = REMAINING,
+            remaining_value = remaining,
+        );
+
+        Ok(json)
     }
 
     pub fn passthrough_get(&self, path_and_query: &str) -> reqwest::Result<String> {
@@ -85,9 +118,10 @@ impl Unsplash {
 
         let mut res: reqwest::Response = self.client.get(&url).send()?;
 
-        self.store_rate_limits(&res, "X-Ratelimit-Limit");
-        self.store_rate_limits(&res, "X-Ratelimit-Remaining");
-        res.text()
+        self.store_rate_limits(&res, LIMIT);
+        self.store_rate_limits(&res, REMAINING);
+
+        self.make_text_response(&mut res)
     }
 
     pub fn send<R, O>(&self, required: R, optional: O) -> reqwest::Result<String>
@@ -111,22 +145,14 @@ impl Unsplash {
             routes::Method::Post => res = self.client.post(&url).send()?,
         }
 
-        self.store_rate_limits(&res, "X-Ratelimit-Limit");
-        self.store_rate_limits(&res, "X-Ratelimit-Remaining");
-        res.text()
+        self.store_rate_limits(&res, LIMIT);
+        self.store_rate_limits(&res, REMAINING);
+
+        self.make_text_response(&mut res)
     }
 
     fn get_access_key_param(&self) -> String {
         format!("client_id={}", self.access_key)
-    }
-
-    pub fn get_limit_info(&self) -> Result<String, reqwest::Error> {
-        let limit = self.rate_limit.load(Ordering::Relaxed);
-        let remaining = self.rate_remaining.load(Ordering::Relaxed);
-        Result::Ok(format!(
-            "{{\"limit\": \"{}\", \"remaining\": \"{}\"}}",
-            limit, remaining
-        ))
     }
 }
 

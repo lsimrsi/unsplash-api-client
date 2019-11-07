@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import './App.css';
 
 function App() {
@@ -22,23 +22,24 @@ function App() {
     return json;
   }
 
-  useEffect(() => {
-    async function fetchLimits() {
-      let res = await fetch(`/unsplash/limit-info`, {
-        method: 'GET',
-      });
-      let json = await validate_res(res);
-      setLimitInfo(json);
-    }
-    fetchLimits();
-  }, [photos]);
+  // useEffect(() => {
+  //   async function fetchLimits() {
+  //     let res = await fetch(`/unsplash/limit-info`, {
+  //       method: 'GET',
+  //     });
+  //     let json = await validate_res(res);
+  //     setLimitInfo(json);
+  //   }
+  //   fetchLimits();
+  // }, [photos]);
 
   const fetchSearchPhotos = async () => {
     let res = await fetch(`/unsplash/search/photos?&query=${search}`, {
       method: 'GET',
     });
     let json = await validate_res(res);
-    setPhotos(json);
+    setPhotos(json.body);
+    setLimitInfo(json.headers);
   }
 
   const fetchPhotosRandom = async () => {
@@ -50,7 +51,8 @@ function App() {
     });
 
     let json = await validate_res(res);
-    setPhotos({results: json});
+    setPhotos({results: json.body});
+    setLimitInfo(json.headers);
   }
 
   return (
@@ -61,8 +63,8 @@ function App() {
       </form>
       <div id="buttons">
         <button onClick={fetchPhotosRandom}>Random</button>
-        {limitInfo && <span>Limit: {limitInfo.limit}</span>}
-        {limitInfo && <span>Remaining: {limitInfo.remaining}</span>}
+        {limitInfo && <span>Limit: {limitInfo["X-Ratelimit-Limit"]}</span>}
+        {limitInfo && <span>Remaining: {limitInfo["X-Ratelimit-Remaining"]}</span>}
       </div>
       <section id="photos">
         {photos && photos.results.map((photo) => {

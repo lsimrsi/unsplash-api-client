@@ -16,10 +16,10 @@ fn unsplash_get(
 
     actix_web::web::block(move || unsplash.passthrough_get(&path_and_query))
         .from_err()
-        .and_then(|res| {
+        .and_then(|body_text| {
             HttpResponse::Ok()
                 .content_type("application/json")
-                .body(res)
+                .body(body_text)
         })
 }
 
