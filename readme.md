@@ -6,16 +6,11 @@ Rust Library to work with the Unsplash API.
 `lib.rs` will eventually become its own crate.
 
 ## Usage
-Only works with curl for now. There is a `curl.txt` file with curl commands you can run.
+You can use curl or the react front-end to make requests to the server.
 
-## Notes
-I'm using a `reqwest::Client` (not async) in an `Arc`, so I think at least the same thread pool will be used for the `Client` for all requests. This was recommended in the `reqwest` docs:
-https://docs.rs/reqwest/0.9.22/reqwest/struct.Client.html:
->The Client holds a connection pool internally, so it is advised that you create one and reuse it.
+To start react, `cd ./react-ui` and then `yarn start`.
 
-I think (and I could be wrong) that to avoid blocking, this library should be using `reqwest::r#async::Client`, but then Rust will throw an error about `AsyncFactory` not being implemented for the `to_async` handler.
-
-In order to avoid that error I'm using `reqwest::Client` in conjunction with `actix_web::web::block` in the `to_async` handler.
+For curl, there are a list of commands you can run in `curl.txt`.
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
