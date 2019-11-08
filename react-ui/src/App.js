@@ -45,7 +45,7 @@ function App() {
   const fetchPhotosRandom = async () => {
     let url = "/unsplash/photos/random?count=1";
     url = search ? url + `&query=${search}` : url;
-  
+
     let res = await fetch(url, {
       method: 'GET',
     });
