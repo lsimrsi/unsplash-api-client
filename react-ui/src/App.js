@@ -1,10 +1,21 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import './App.css';
 
 function App() {
   const [search, setSearch] = useState("");
   const [photos, setPhotos] = useState(null);
   const [limitInfo, setLimitInfo] = useState(null);
+
+  useEffect(() => {
+    async function getLimits() {
+      let res = await fetch(`/unsplash/limit-info`, {
+        method: 'GET',
+      });
+      let json = await validate_res(res);
+      setLimitInfo(json);
+    }
+    getLimits();
+  }, []);
 
   const onSearchChange = (e) => {
     setSearch(e.target.value);
